@@ -3,7 +3,7 @@
 
 This project provides a small Python service to fetch state data from a **Homevolt** residential grid battery and publish it to **MQTT** and **Prometheus**. 
 
-> ℹ️ The Homevolt must have its **local management web server enabled** for this to work. If you’re unsure, let me know and I can provide more details about the setup.
+> ℹ️ The Homevolt must have its **local management web server enabled** for this to work.
 
 ## Purpose
 
