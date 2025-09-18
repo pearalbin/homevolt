@@ -1,0 +1,21 @@
+{
+  "homevolt_url": "http://homevolt_ip/ems.json",
+  "update_interval": 5,
+  "enable_mqtt": true,
+  "enable_prometheus": true,
+  "mqtt_broker": "mqtthost",
+  "mqtt_port": 1883,
+  "mqtt_topics": {
+    "raw": "homevolt/data/raw",
+    "soc_avg": "homevolt/data/soc_avg",
+    "power_output": "homevolt/data/power_output",
+    "grid_power": "homevolt/data/grid_power",
+    "solar_power": "homevolt/data/solar_power",
+    "load_power": "homevolt/data/load_power",
+    "frequency": "homevolt/data/frequency",
+    "energy_produced": "homevolt/data/energy_produced",
+    "energy_consumed": "homevolt/data/energy_consumed",
+    "cycle_count": "homevolt/data/cycle_count"
+  }
+}
+
