@@ -4,10 +4,23 @@ import requests
 import paho.mqtt.client as mqtt
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
+import logging
+
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s'
+)
 
 # Load config from file
-with open("config.json", "r") as f:
-    config = json.load(f)
+try:
+    with open("config.json", "r") as f:
+        config = json.load(f)
+    logging.info("Loaded configuration from config.json")
+except Exception as e:
+    logging.error(f"Failed to load config.json: {e}")
+    exit(1)
 
 HOMEVOLT_URL = config.get("homevolt_url", "http://example.com/data.json")
 ENABLE_MQTT = config.get("enable_mqtt", True)
@@ -28,14 +41,16 @@ MQTT_TOPIC_ENERGY_PRODUCED = MQTT_TOPICS.get("energy_produced", "homevolt/data/e
 MQTT_TOPIC_ENERGY_CONSUMED = MQTT_TOPICS.get("energy_consumed", "homevolt/data/energy_consumed")
 MQTT_TOPIC_CYCLE_COUNT = MQTT_TOPICS.get("cycle_count", "homevolt/data/cycle_count")
 
+
 # Initialize MQTT client if enabled
 mqtt_client = None
 if ENABLE_MQTT:
     mqtt_client = mqtt.Client(protocol=mqtt.MQTTv311)
     try:
         mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
+        logging.info(f"Connected to MQTT broker at {MQTT_BROKER}:{MQTT_PORT}")
     except Exception as e:
-        print(f"Failed to connect to MQTT broker: {e}")
+        logging.error(f"Failed to connect to MQTT broker: {e}")
         exit(1)
 
 metrics = {}
@@ -63,13 +78,15 @@ def extract_relevant_metrics(data):
 
         global metrics
         metrics = extracted
+        logging.debug(f"Extracted metrics: {extracted}")
         return extracted
     except Exception as e:
-        print(f"Error extracting metrics: {e}")
+        logging.warning(f"Error extracting metrics: {e}")
         return {}
 
 def fetch_and_publish():
     try:
+        logging.debug(f"Fetching data from {HOMEVOLT_URL}")
         response = requests.get(HOMEVOLT_URL)
         response.raise_for_status()
         json_data = response.json()
@@ -88,15 +105,16 @@ def fetch_and_publish():
             mqtt_client.publish(MQTT_TOPIC_ENERGY_CONSUMED, json.dumps(extracted_data["energy_consumed"]))
             mqtt_client.publish(MQTT_TOPIC_CYCLE_COUNT, json.dumps(extracted_data["cycle_count"]))
 
-            print("Published extracted metrics")
+            logging.debug("Published extracted metrics to MQTT")
     except requests.RequestException as e:
-        print(f"HTTP Request failed: {e}")
+        logging.warning(f"HTTP Request failed: {e}")
     except json.JSONDecodeError:
-        print("Failed to decode JSON response")
+        logging.warning("Failed to decode JSON response")
 
 class MetricsHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/metrics":
+            logging.info(f"Prometheus scrape from {self.client_address}")
             self.send_response(200)
             self.send_header("Content-type", "text/plain")
             self.end_headers()
@@ -110,10 +128,11 @@ class MetricsHandler(BaseHTTPRequestHandler):
 
 def run_http_server():
     server = HTTPServer(('0.0.0.0', 8000), MetricsHandler)
-    print("Starting HTTP server on port 8000")
+    logging.info("Starting HTTP server on port 8000")
     server.serve_forever()
 
 if __name__ == "__main__":
+    logging.info("Homevolt exporter starting up")
     if ENABLE_PROMETHEUS:
         server_thread = threading.Thread(target=run_http_server)
         server_thread.daemon = True
